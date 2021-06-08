@@ -1,0 +1,6 @@
+.gitattributes
+.gitignore
+venv/
+.vscode/
+LICENSE
+README.md

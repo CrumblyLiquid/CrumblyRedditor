@@ -112,3 +112,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ignore VSCode settings
+.vscode
+
+# Bot configuration stuff
+config.json
+db/
+logs/
+*.sql
