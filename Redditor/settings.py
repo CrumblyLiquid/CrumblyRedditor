@@ -7,7 +7,7 @@ FILE_PATH = Path(__file__).parent.absolute()
 CONFIG_PATH = FILE_PATH/"./config.json"
 
 # Path to the DB folder
-DB_NAME = "Redditor.sql"
+DB_NAME = "Redditor.sqlite3"
 DB_FOLDER =  FILE_PATH/"./db/"
 DB_PATH = DB_FOLDER/DB_NAME
 
