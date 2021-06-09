@@ -3,6 +3,8 @@ from json import load
 
 class Reddit:
     def __init__(self, reddit: dict) -> None:
+        self.username = reddit["username"]
+        self.password = reddit["password"]
         self.client_id = reddit["client_id"]
         self.client_secret = reddit["client_secret"]
         self.user_agent = reddit["user_agent"]
@@ -12,6 +14,7 @@ class ConfigManager():
     config: dict
     token: str
     prefix: str
+    reddit: Reddit
 
     def __init__(self, path: Path) -> None:
         with open(path, 'r') as fp:
