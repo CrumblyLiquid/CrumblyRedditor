@@ -40,7 +40,6 @@ class Redditor(commands.Bot):
         self.guild_count = 0
         self.member_count = 0
 
-        self.load_cogs()
         self.loop.create_task(self.setup_func())
 
     def setup_settings(self):
@@ -75,7 +74,7 @@ class Redditor(commands.Bot):
         await self.aDB.connection.close()
         await super().close()
 
-    def load_cogs(self):
+    async def load_cogs(self):
         # Load Base
         base_str = f"{self.COGS_NAME}.Base"
         self.load_extension(base_str)
@@ -128,6 +127,9 @@ class Redditor(commands.Bot):
                 await self.pm.a_remove(guildID)
 
         await self.aDB.connection.commit()
+
+        # Load cogs
+        await self.load_cogs()
 
     # Hooks into PrefixManager
     async def on_guild_join(self, guild):
