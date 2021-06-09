@@ -97,10 +97,6 @@ class Base(commands.Cog):
         self.bot = bot
         self.cm = CogManager(self.bot)
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"Logged in as {self.bot.user.name}#{self.bot.user.discriminator}\nReady signal recieved!")
-
     # Commads for managing cogs: /cogs <load/unload/reload> <cog/all> or /cogs list <all/loaded/unloaded>
     @commands.group(aliases = ['cog', 'c'], hidden=True)
     @commands.is_owner()
