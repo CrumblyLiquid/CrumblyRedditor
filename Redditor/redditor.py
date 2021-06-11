@@ -130,7 +130,6 @@ class Redditor(commands.Bot):
 
         # Load cogs
         await self.load_cogs()
-        print("hello")
 
     async def on_ready(self):
         print(f"Logged in as {self.user.name}#{self.user.discriminator}\nReady signal recieved!")
