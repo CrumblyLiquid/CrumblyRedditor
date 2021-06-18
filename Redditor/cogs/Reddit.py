@@ -96,7 +96,7 @@ class Reddit(commands.Cog):
     @commands.group(name="reddit", aliases=['r'])
     async def reddit_cmd(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(self.bot.get_command("reddit"))
+            await ctx.send_help("reddit")
 
     @reddit_cmd.group(aliases=["channels", "c"])
     @commands.guild_only()
