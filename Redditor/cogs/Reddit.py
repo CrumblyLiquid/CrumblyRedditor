@@ -35,11 +35,11 @@ class Reddit(commands.Cog):
                 self.guilds.append(guild.id)
 
         # Create reddit client
-        self.r = r.Reddit(username=self.bot.config.reddit.username,
-                          password=self.bot.config.reddit.password,
-                          client_id=self.bot.config.reddit.client_id,
-                          client_secret=self.bot.config.reddit.client_secret,
-                          user_agent=self.bot.config.reddit.user_agent)
+        self.r = r.Reddit(username=self.bot.cm.reddit.username,
+                          password=self.bot.cm.reddit.password,
+                          client_id=self.bot.cm.reddit.client_id,
+                          client_secret=self.bot.cm.reddit.client_secret,
+                          user_agent=self.bot.cm.reddit.user_agent)
 
         self.rm = RedditManager(r=self.r)
 

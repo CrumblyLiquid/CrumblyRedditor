@@ -34,6 +34,7 @@ class Redditor(commands.Bot):
         self.loop.create_task(self.setup_adb())
         self.config = ConfigManager(path=self.CONFIG_PATH)
 
+        self.cm = ConfigManager(path=self.CONFIG_PATH)
         self.version = '0.1'
         self.main_colour = 0x00A8B5
 
@@ -92,12 +93,12 @@ class Redditor(commands.Bot):
     async def get_prefix(self, message: discord.Message):
         if message.guild != None:
             if (self.pm is None):
-                prefix = self.config.prefix
+                prefix = self.cm.prefix
             else:
                 prefix = await self.pm.a_get(message.guild.id)
         else:
             if (self.pm is None):
-                prefix = self.config.prefix
+                prefix = self.cm.prefix
             else:
                 prefix = self.pm.default
         return [prefix, f'<@!{self.user.id}>', f'@{self.user.id}']
@@ -149,4 +150,4 @@ class Redditor(commands.Bot):
 
 if __name__ == "__main__":
     bot = Redditor()
-    bot.run(bot.config.token)
+    bot.run(bot.cm.token)
