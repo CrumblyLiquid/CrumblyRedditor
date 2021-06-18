@@ -18,7 +18,7 @@ if __package__ is None:
     sys.path.insert(0, str(DIR.parent))
     __package__ = DIR.name
 
-from .settings import *
+import .settings
 from .core.db import DB
 from .core.prefix import PrefixManager
 from .core.config import ConfigManager
@@ -43,14 +43,14 @@ class Redditor(commands.Bot):
         self.loop.create_task(self.setup_func())
 
     def setup_settings(self):
-        self.FILE_PATH = FILE_PATH
-        self.CONFIG_PATH = CONFIG_PATH
-        self.DB_NAME = DB_NAME
-        self.DB_FOLDER = DB_FOLDER
-        self.DB_PATH = DB_PATH
-        self.COGS_NAME = COGS_NAME
-        self.COGS_FOLDER = COGS_FOLDER
-        self.LOGS_FOLDER = LOGS_FOLDER
+        self.FILE_PATH = settings.FILE_PATH
+        self.CONFIG_PATH = settings.CONFIG_PATH
+        self.DB_NAME = settings.DB_NAME
+        self.DB_FOLDER = settings.DB_FOLDER
+        self.DB_PATH = settings.DB_PATH
+        self.COGS_NAME = settings.COGS_NAME
+        self.COGS_FOLDER = settings.COGS_FOLDER
+        self.LOGS_FOLDER = settings.LOGS_FOLDER
 
     def setup_db(self):
         conn = sql.connect(self.DB_PATH)
