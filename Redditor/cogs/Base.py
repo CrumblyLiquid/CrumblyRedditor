@@ -95,7 +95,7 @@ class CogManager():
 class Base(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.cm = CogManager(self.bot)
+        self.cgm = CogManager(self.bot)
 
     # Commads for managing cogs: /cogs <load/unload/reload> <cog/all> or /cogs list <all/loaded/unloaded>
     @commands.group(aliases = ['cog', 'c'], hidden=True)
@@ -107,9 +107,9 @@ class Base(commands.Cog):
     @cogs.command(hidden=True)
     @commands.is_owner()
     async def debug(self, ctx):
-        self.cm.all_list = self.cm.all(full=True)
-        self.cm.loaded_list = self.cm.loaded(full=True)
-        self.cm.unloaded_list = self.cm.unloaded(full=True)
+        self.cgm.all_list = self.cgm.all(full=True)
+        self.cgm.loaded_list = self.cgm.loaded(full=True)
+        self.cgm.unloaded_list = self.cgm.unloaded(full=True)
 
     # Load unload and reload: maybe replace searching for .py file with exception Extension.NotFound, etc.
     @cogs.command(aliases = ['l'], hidden=True)
@@ -118,19 +118,19 @@ class Base(commands.Cog):
         if specified_cog in ['all', 'a', None]:
             message = '```fix\nCogs succesfully loaded:```'
             loadedcogs = []
-            for cog in self.cm.unloaded(True):
+            for cog in self.cgm.unloaded(True):
                 self.bot.load_extension(cog)
-                loadedcogs.append(self.cm.get_cog(cog))
+                loadedcogs.append(self.cgm.get_cog(cog))
             message += '```diff\n'
             for lcog in loadedcogs:
                 message += f'+ {lcog}\n'
             message += '```'
             return await ctx.send(message)
         else:
-            if specified_cog in self.cm.unloaded():
-                self.bot.load_extension(self.cm.get_full_cog(specified_cog))
+            if specified_cog in self.cgm.unloaded():
+                self.bot.load_extension(self.cgm.get_full_cog(specified_cog))
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' succesfully loaded.```')
-            elif specified_cog in self.cm.all():
+            elif specified_cog in self.cgm.all():
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' already loaded.```')
             else:
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' not found.```')
@@ -141,19 +141,19 @@ class Base(commands.Cog):
         if specified_cog in ['all', 'a', None]:
             message = '```fix\nCogs succesfully unloaded:```'
             unloadedcogs = []
-            for cog in self.cm.loaded(True):
+            for cog in self.cgm.loaded(True):
                 self.bot.unload_extension(cog)
-                unloadedcogs.append(self.cm.get_cog(cog))
+                unloadedcogs.append(self.cgm.get_cog(cog))
             message += '```diff\n'
             for ulcog in unloadedcogs:
                 message += f'- {ulcog}\n'
             message += '```'
             return await ctx.send(message)
         else:
-            if specified_cog in self.cm.loaded():
-                self.bot.unload_extension(self.cm.get_full_cog(specified_cog))
+            if specified_cog in self.cgm.loaded():
+                self.bot.unload_extension(self.cgm.get_full_cog(specified_cog))
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' succesfully unloaded.```')
-            elif specified_cog in self.cm.all():
+            elif specified_cog in self.cgm.all():
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' isn\'t loaded.```')
             else:
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' not found.```')
@@ -164,20 +164,20 @@ class Base(commands.Cog):
         if specified_cog in ['all', 'a', None]:
             message = '```fix\nCogs succesfully reloaded:```'
             reloadedcogs = []
-            for cog in self.cm.loaded(True):
+            for cog in self.cgm.loaded(True):
                 self.bot.reload_extension(cog)
-                reloadedcogs.append(self.cm.get_cog(cog))
+                reloadedcogs.append(self.cgm.get_cog(cog))
             message += '```diff\n'
             for rcog in reloadedcogs:
                 message += f'+ {rcog}\n'
             message += '```'
             return await ctx.send(message)
         else:
-            if specified_cog in self.cm.loaded():
-                self.bot.reload_extension(self.cm.get_full_cog(specified_cog))
+            if specified_cog in self.cgm.loaded():
+                self.bot.reload_extension(self.cgm.get_full_cog(specified_cog))
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' succesfully reloaded.```')
-            elif specified_cog in self.cm.all():
-                self.bot.load_extension(self.cm.get_full_cog(specified_cog))
+            elif specified_cog in self.cgm.all():
+                self.bot.load_extension(self.cgm.get_full_cog(specified_cog))
                 return await ctx.send(f'```fix\nCan\'t reload something which isn\'t loaded. Loading \'{specified_cog}\'```')
             else:
                 return await ctx.send(f'```fix\nCog \'{specified_cog}\' not found.```')
@@ -191,8 +191,8 @@ class Base(commands.Cog):
     @list.command(aliases=['a'], hidden=True)
     @commands.is_owner()
     async def all(self, ctx):
-        loadedcogs = self.cm.loaded()
-        unloadedcogs = self.cm.unloaded()
+        loadedcogs = self.cgm.loaded()
+        unloadedcogs = self.cgm.unloaded()
 
         coglen = 0 # Len of the logest cog name (we'll use that later)
         for acog in list(loadedcogs) + list(unloadedcogs):
@@ -221,7 +221,7 @@ class Base(commands.Cog):
     @list.command(aliases=['load', 'l'], hidden=True)
     @commands.is_owner()
     async def loaded(self, ctx):
-        loadedcogs = self.cm.loaded()
+        loadedcogs = self.cgm.loaded()
         coglen = 0
         for lcog in loadedcogs:
             if len(lcog) > coglen:
@@ -245,7 +245,7 @@ class Base(commands.Cog):
     @list.command(aliases=['unload', 'unl', 'ul', 'un', 'u'], hidden=True)
     @commands.is_owner()
     async def unloaded(self, ctx):
-        unloadedcogs = self.cm.unloaded()
+        unloadedcogs = self.cgm.unloaded()
 
         coglen = 0
         for unlcog in unloadedcogs:
