@@ -24,8 +24,6 @@
 }
 ```
 
- 5. Run the `bot.py`
-
 ## Issues
  If you encounter any bugs create an issue and I'll try to resolve the porblem.
 
