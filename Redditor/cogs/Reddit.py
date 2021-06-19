@@ -54,6 +54,7 @@ class Reddit(commands.Cog):
         # Close reddit instance
         self.bot.loop.create_task(self.r.close())
 
+    # Start the post loop at a certain time
     async def start_post(self):
         now = datetime.now()
         if now.hour < 17:
@@ -76,19 +77,22 @@ class Reddit(commands.Cog):
             await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (guild, ))
             channel_ids = await cursor.fetchall()
             await cursor.close()
-            # Cache channels
+
+            # Store channels
             channels = []
             for channel_id in channel_ids:
                 channel = self.bot.get_channel(channel_id[0])
                 if channel is None:
                     channel = await self.bot.fetch_channel(channel_id[0])
                 channels.append(channel)
+
+            # Maybe implement some subreddit/submission caching (not really necessary now since we only work with text)
             for sub in subs:
                 subreddit = await self.r.subreddit(sub[0])
                 if sub[1] == "top":
                     async for post in subreddit.top(limit=sub[2]):
-                        # Should also add link to the original post on reddit
                         author = await post.author()
+                        # Limit the amount of text to not exceed the embed limit
                         if len(post.selftext) < 2048:
                             descr = post.selftext
                         else:
