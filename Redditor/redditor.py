@@ -103,7 +103,7 @@ class Redditor(commands.Bot):
     async def setup_func(self):
         await self.wait_until_ready()
 
-        self.pm = PrefixManager(DB=self.DB, aDB=self.aDB, default=self.config.prefix)
+        self.pm = PrefixManager(DB=self.DB, aDB=self.aDB, default=self.cm.prefix)
 
         # Gets every guild in our DB
         cursor = await self.aDB.cursor()
