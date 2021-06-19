@@ -33,8 +33,11 @@ class Redditor(commands.Bot):
         self.pm = None
         # Create ConfigManager
         self.cm = ConfigManager(path=self.CONFIG_PATH)
-        self.version = '0.1'
-        self.main_colour = 0x00A8B5
+
+        # Not really necessary, might delete later
+        self.version = '0.2'
+        # Colour for embeds 'n stuff
+        self.main_colour = 0xED001C
 
         self.guild_count = 0
         self.member_count = 0
