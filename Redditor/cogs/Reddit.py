@@ -17,7 +17,7 @@ class Reddit(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-        self.reddit_colour = 0xFF5700
+        self.reddit_colour = 0xFF4500
 
         # Create table
         self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, amount INTEGER)")
@@ -88,7 +88,14 @@ class Reddit(commands.Cog):
                 if sub[1] == "top":
                     async for post in subreddit.top(limit=sub[2]):
                         # Should also add link to the original post on reddit
-                        embed = discord.Embed(title=post.title, description=f"Posted in r/{sub[0]} by u/{await post.author()} at {post.created_utc.strftime('%H:%M %d.%m. %Y')}\n{post.selftext}", colour=self.reddit_colour)
+                        author = await post.author()
+                        if len(post.selftext) < 2048:
+                            descr = post.selftext
+                        else:
+                            descr = post.selftext[:2045] + "..."
+                        embed = discord.Embed(title=post.title, description=descr, url="https://www.reddit.com"+post.permalink, colour=self.reddit_colour)
+                        embed.set_author(name=f"by u/{author.name}", icon_url=author.icon_img)
+                        embed.set_footer(text=f"r/{sub[0]}", icon_url=subreddit.icon_img)
                         if post.url.endswith(".png") or post.url.endswith(".jpg") or post.url.endswith(".jpeg") or post.url.endswith(".gif"):
                             embed.set_image(url=post.url)
                         for channel in channels:
@@ -96,8 +103,12 @@ class Reddit(commands.Cog):
                             if post.over_18:
                                 if channel.is_nsfw():
                                     await channel.send(embed=embed)
+                                    if post.is_video:
+                                        await channel.send(post.media['reddit_video']['fallback_url'])
                             else:
                                 await channel.send(embed=embed)
+                                if post.is_video:
+                                    await channel.send(post.media['reddit_video']['fallback_url'])
 
     @commands.group(name="reddit", aliases=['r'])
     async def reddit_cmd(self, ctx):
