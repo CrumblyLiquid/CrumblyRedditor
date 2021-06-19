@@ -29,6 +29,9 @@ class Redditor(commands.Bot):
         # Setup all the basic stuff
         self.setup()
 
+        # Create attribute for PrefixManager
+        self.pm = None
+        # Create ConfigManager
         self.cm = ConfigManager(path=self.CONFIG_PATH)
         self.version = '0.1'
         self.main_colour = 0x00A8B5
