@@ -97,10 +97,12 @@ class Base(commands.Cog):
         self.bot = bot
         self.cgm = CogManager(self.bot)
 
-    @commands.command(name="h")
+    @commands.command(name="h", hidden=True)
     @commands.cooldown(6, 60, commands.BucketType.user)
-    async def help_alias(self, ctx, *, cmd):
-        await ctx.send_help(cmd)
+    async def help_alias(self, ctx, *, command: str = None):
+        if command is None:
+            return await ctx.send_help()
+        return await ctx.send_help(command)
 
     # Commads for managing cogs: /cogs <load/unload/reload> <cog/all> or /cogs list <all/loaded/unloaded>
     @commands.group(aliases = ['cog', 'c'], hidden=True)
