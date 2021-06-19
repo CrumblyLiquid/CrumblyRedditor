@@ -25,13 +25,9 @@ from .help import RedditorHelp
 
 class Redditor(commands.Bot):
     def __init__(self):
-        self.setup_settings()
-        self.setup_folders()
-        self.setup_db()
-        self.pm = None
         super().__init__(command_prefix=self.get_prefix, help_command=RedditorHelp())
-        self.loop.create_task(self.setup_adb())
-        self.config = ConfigManager(path=self.CONFIG_PATH)
+        # Setup all the basic stuff
+        self.setup()
 
         self.cm = ConfigManager(path=self.CONFIG_PATH)
         self.version = '0.1'
@@ -41,6 +37,13 @@ class Redditor(commands.Bot):
         self.member_count = 0
 
         self.loop.create_task(self.setup_func())
+
+    # Call all the necessary setup functions
+    def setup(self):
+        self.setup_settings()
+        self.setup_folders()
+        self.setup_db()
+        self.loop.create_task(self.setup_adb())
 
     def setup_settings(self):
         self.FILE_PATH = FILE_PATH
