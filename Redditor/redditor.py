@@ -54,14 +54,10 @@ class Redditor(commands.Bot):
         self.LOGS_FOLDER = LOGS_FOLDER
 
     def setup_db(self):
-        conn = sql.connect(self.DB_PATH)
-        cursor = conn.cursor()
-        self.DB = DB(conn, cursor)
+        self.DB = sql.connect(self.DB_PATH)
 
     async def setup_adb(self):
-        conn = await asql.connect(self.DB_PATH)
-        cursor = await conn.cursor()
-        self.aDB = DB(conn, cursor)
+        self.aDB = await asql.connect(self.DB_PATH)
 
     def setup_folders(self):
         if not ospath.exists(self.DB_FOLDER):
@@ -71,8 +67,9 @@ class Redditor(commands.Bot):
             makedirs(self.LOGS_FOLDER)
 
     async def close(self):
-        self.DB.connection.close()
-        await self.aDB.connection.close()
+        # Close DB connections first
+        self.DB.close()
+        await self.aDB.close()
         await super().close()
 
     async def load_cogs(self):
@@ -110,10 +107,12 @@ class Redditor(commands.Bot):
         self.pm = PrefixManager(DB=self.DB, aDB=self.aDB, default=self.config.prefix)
 
         # Gets every guild in our DB
-        await self.aDB.cursor.execute('SELECT * FROM prefixes')
+        cursor = await self.aDB.cursor()
+        await cursor.execute('SELECT * FROM prefixes')
         guildIDs = []
-        async for row in self.aDB.cursor:
+        async for row in cursor:
             guildIDs.append(row[0])
+        await cursor.close()
 
         # Checks if it has guild in DB, if it isn't it will insert it into DB
         for guild in self.guilds:

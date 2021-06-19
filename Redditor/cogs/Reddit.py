@@ -20,19 +20,21 @@ class Reddit(commands.Cog):
         self.reddit_colour = 0xFF5700
 
         # Create table
-        self.bot.DB.connection.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, amount INTEGER)")
-        self.bot.DB.connection.execute("CREATE TABLE IF NOT EXISTS reddit_channels (id INTEGER PRIMARY KEY, guild INTEGER, channel INTEGER)")
-        self.bot.DB.connection.commit()
+        self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, amount INTEGER)")
+        self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_channels (id INTEGER PRIMARY KEY, guild INTEGER, channel INTEGER)")
+        self.bot.DB.commit()
 
         # List of guild ids who have subreddits registered
         self.guilds = []
 
         # Check for subreddits in database
+        cursor = self.bot.DB.cursor()
         for guild in self.bot.guilds:
-            self.bot.DB.cursor.execute("SELECT reddit_subs.id, reddit_channels.id FROM reddit_subs JOIN reddit_channels ON reddit_subs.guild=reddit_channels.guild WHERE reddit_subs.guild=?", (guild.id, ))
-            res = self.bot.DB.cursor.fetchone()
+            cursor.execute("SELECT reddit_subs.id, reddit_channels.id FROM reddit_subs JOIN reddit_channels ON reddit_subs.guild=reddit_channels.guild WHERE reddit_subs.guild=?", (guild.id, ))
+            res = cursor.fetchone()
             if res is not None:
                 self.guilds.append(guild.id)
+        cursor.close()
 
         # Create reddit client
         self.r = r.Reddit(username=self.bot.cm.reddit.username,
@@ -65,11 +67,15 @@ class Reddit(commands.Cog):
     @tasks.loop(hours=24)
     async def post(self):
         for guild in self.guilds:
-            await self.bot.aDB.cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (guild, ))
-            subs = await self.bot.aDB.cursor.fetchall()
+            cursor = await self.bot.aDB.cursor()
+            await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (guild, ))
+            subs = await cursor.fetchall()
+            await cursor.close()
             # Get channel settings
-            await self.bot.aDB.cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (guild, ))
-            channel_ids = await self.bot.aDB.cursor.fetchall()
+            cursor = await self.bot.aDB.cursor()
+            await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (guild, ))
+            channel_ids = await cursor.fetchall()
+            await cursor.close()
             # Cache channels
             channels = []
             for channel_id in channel_ids:
@@ -104,7 +110,10 @@ class Reddit(commands.Cog):
     async def channel(self, ctx):
         # List all channels
         if ctx.invoked_subcommand is None:
-            await self.bot.aDB.cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (ctx.guild.id, ))
+            cursor = await self.bot.aDB.cursor()
+            await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (ctx.guild.id, ))
+            channelids = await cursor.fetchall()
+            await cursor.close()
 
             async def get_channel(cid: int) -> discord.TextChannel or None:
                 c = self.bot.get_channel(cid)
@@ -113,7 +122,7 @@ class Reddit(commands.Cog):
                 return c
 
             channels = []
-            for cid in await self.bot.aDB.cursor.fetchall():
+            for cid in channelids:
                 c = await get_channel(cid[0])
                 channels.append(f"- {c.mention}")
             embed = discord.Embed(title=f"Reddit channels for {ctx.guild.name}", description='\n'.join(channels), colour=self.reddit_colour)
@@ -123,11 +132,13 @@ class Reddit(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def add_channel(self, ctx, channel: discord.TextChannel):
-        await self.bot.aDB.cursor.execute("SELECT channel FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
-        c = await self.bot.aDB.cursor.fetchone()
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
+        c = await cursor.fetchone()
+        await cursor.close()
         if c is None:
-            await self.bot.aDB.connection.execute("INSERT INTO reddit_channels (guild, channel) VALUES(?,?)", (ctx.guild.id, channel.id))
-            await self.bot.aDB.connection.commit()
+            await self.bot.aDB.execute("INSERT INTO reddit_channels (guild, channel) VALUES(?,?)", (ctx.guild.id, channel.id))
+            await self.bot.aDB.commit()
             if ctx.guild.id not in self.guilds:
                 self.guilds.append(ctx.guild.id)
             embed = discord.Embed(title=f"Channel {channel.name} was added", description=f"Channel {channel.name} was added! I will start sending posts to that channel :)", colour=self.reddit_colour)
@@ -140,16 +151,20 @@ class Reddit(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def remove_channel(self, ctx, channel: discord.TextChannel):
-        await self.bot.aDB.cursor.execute("SELECT channel FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
-        c = await self.bot.aDB.cursor.fetchone()
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
+        c = await cursor.fetchone()
+        await cursor.close()
         if c is not None:
             # Delete the channel
-            await self.bot.aDB.connection.execute("DELETE FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
-            await self.bot.aDB.connection.commit()
+            await self.bot.aDB.execute("DELETE FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
+            await self.bot.aDB.commit()
 
             # Check if there are any other channels, if no, delete the guild from self.guilds
-            await self.bot.aDB.cursor.execute("SELECT channel FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
-            c = await self.bot.aDB.cursor.fetchone()
+            cursor = await self.bot.aDB.cursor()
+            await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=? AND channel=?", (ctx.guild.id, channel.id))
+            c = await cursor.fetchone()
+            await cursor.close()
             if ctx.guild.id in self.guilds and c is None:
                 self.guilds.remove(ctx.guild.id)
             embed = discord.Embed(title=f"Channel {channel.name} was removed", description=f"Channel {channel.name} was removed! I will no longer send posts to that channel :)", colour=self.reddit_colour)
@@ -164,10 +179,12 @@ class Reddit(commands.Cog):
     async def subreddit(self, ctx):
         # List all subreddits
         if ctx.invoked_subcommand is None:
-            await self.bot.aDB.cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (ctx.guild.id, ))
-
+            cursor = await self.bot.aDB.cursor()
+            await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (ctx.guild.id, ))
+            bundles = await cursor.fetchall()
+            await cursor.close()
             subs = []
-            for bundle in await self.bot.aDB.cursor.fetchall():
+            for bundle in bundles:
                 subs.append(f"- r/{bundle[0]} | {bundle[1]} | {bundle[2]}")
             embed = discord.Embed(title=f"Subreddits for {ctx.guild.name}", description="Subreddit | Mode | Amount\n" + '\n'.join(subs), colour=self.reddit_colour)
             await ctx.send(embed=embed)
@@ -181,14 +198,16 @@ class Reddit(commands.Cog):
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
-        await self.bot.aDB.cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
-        s = await self.bot.aDB.cursor.fetchone()
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
+        s = await cursor.fetchone()
+        await cursor.close()
 
         # Subreddit doesn't exist
         if s is None:
             # Add the subreddit
-            await self.bot.aDB.connection.execute("INSERT INTO reddit_subs (guild, subreddit, mode, amount) VALUES(?,?,?,?)", (ctx.guild.id, sub, mode, amount))
-            await self.bot.aDB.connection.commit()
+            await self.bot.aDB.execute("INSERT INTO reddit_subs (guild, subreddit, mode, amount) VALUES(?,?,?,?)", (ctx.guild.id, sub, mode, amount))
+            await self.bot.aDB.commit()
 
             # Add to guilds
             if ctx.guild.id in self.guilds:
@@ -210,14 +229,16 @@ class Reddit(commands.Cog):
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
-        await self.bot.aDB.cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
-        s = await self.bot.aDB.cursor.fetchone()
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
+        s = await cursor.fetchone()
+        await cursor.close()
 
         # Subreddit doesn't exist
         if s is None:
             # Add the subreddit
-            await self.bot.aDB.connection.execute("INSERT INTO reddit_subs (guild, subreddit, mode, amount) VALUES(?,?,?,?)", (ctx.guild.id, sub, mode, amount))
-            await self.bot.aDB.connection.commit()
+            await self.bot.aDB.execute("INSERT INTO reddit_subs (guild, subreddit, mode, amount) VALUES(?,?,?,?)", (ctx.guild.id, sub, mode, amount))
+            await self.bot.aDB.commit()
 
             # Add to guilds
             if ctx.guild.id in self.guilds:
@@ -228,8 +249,8 @@ class Reddit(commands.Cog):
         # Subreddit exists
         else:
             # Add the subreddit
-            await self.bot.aDB.connection.execute("UPDATE reddit_subs mode=?, amount=? WHERE guild=? AND subreddit=?", (mode, amount, ctx.guild.id, sub))
-            await self.bot.aDB.connection.commit()
+            await self.bot.aDB.execute("UPDATE reddit_subs mode=?, amount=? WHERE guild=? AND subreddit=?", (mode, amount, ctx.guild.id, sub))
+            await self.bot.aDB.commit()
             embed = discord.Embed(title=f"Subreddit r/{sub}'s updated", description=f"The settings for r/{sub} are now updated! I will use the new settings from this point onwards!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
@@ -242,16 +263,20 @@ class Reddit(commands.Cog):
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
-        await self.bot.aDB.cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
-        s = await self.bot.aDB.cursor.fetchone()
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
+        s = await cursor.fetchone()
+        await cursor.close()
         if s is not None:
             # Delete the channel
-            await self.bot.aDB.connection.execute("DELETE FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
-            await self.bot.aDB.connection.commit()
+            await self.bot.aDB.execute("DELETE FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
+            await self.bot.aDB.commit()
 
             # Check if there are any other subs, if no, delete the guild from self.guilds
-            await self.bot.aDB.cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
-            s = await self.bot.aDB.cursor.fetchone()
+            cursor = await self.bot.aDB.cursor()
+            await cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
+            s = await cursor.fetchone()
+            await cursor.close()
             if ctx.guild.id in self.guilds and s is None:
                 self.guilds.remove(ctx.guild.id)
             embed = discord.Embed(title=f"Subreddit r/{sub} was removed", description=f"Subreddit r/{sub} was removed! I will no longer send posts from that subreddit :)", colour=self.reddit_colour)
