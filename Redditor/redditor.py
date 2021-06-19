@@ -125,8 +125,6 @@ class Redditor(commands.Bot):
             if self.get_guild(guildID) not in self.guilds:
                 await self.pm.a_remove(guildID)
 
-        await self.aDB.connection.commit()
-
         # Load cogs
         await self.load_cogs()
 
