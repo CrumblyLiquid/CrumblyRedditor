@@ -47,8 +47,8 @@ class Reddit(commands.Cog):
 
         # Start post loop
         # Posts some stuff every day
-        self.post.start()
-        # self.bot.loop.create_task(self.start_post())
+        # self.post.start()
+        self.bot.loop.create_task(self.start_post())
 
     def cog_unload(self):
         # Close reddit instance
