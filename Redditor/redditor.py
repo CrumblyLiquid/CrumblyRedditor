@@ -19,7 +19,6 @@ if __package__ is None:
     __package__ = DIR.name
 
 from .settings import *
-from .core.db import DB
 from .core.prefix import PrefixManager
 from .core.config import ConfigManager
 from .help import RedditorHelp
