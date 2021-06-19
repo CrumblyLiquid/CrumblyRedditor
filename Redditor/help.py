@@ -3,7 +3,7 @@ from discord.ext import commands
 
 class RedditorHelp(commands.HelpCommand):
     def __init__(self):
-        self.main_colour = 0x00A8B5
+        self.main_colour = 0xFF4500
         super().__init__()
 
     def get_command_signature(self, command):
