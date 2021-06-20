@@ -37,7 +37,7 @@ class CrumblyRedditor(commands.Bot):
         # Not really necessary, might delete later
         self.version = '0.2'
         # Colour for embeds 'n stuff
-        self.main_colour = 0xED001C
+        self.main_colour = 0xFF4500
 
         self.guild_count = 0
         self.member_count = 0
