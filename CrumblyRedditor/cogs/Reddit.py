@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import apraw as r
 from asyncio import sleep
 from datetime import datetime
+from typing import Union
 
 # I should maybe migrate more stuff to RedditManager
 class RedditManager:
@@ -47,15 +48,64 @@ class Reddit(commands.Cog):
 
         # Start post loop
         # Posts some stuff every day
-        # self.post.start()
-        self.bot.loop.create_task(self.start_post())
+        # self.post_loop.start()
+        self.bot.loop.create_task(self.start_post_loop())
 
     def cog_unload(self):
         # Close reddit instance
         self.bot.loop.create_task(self.r.close())
 
+    async def post(self, guild: Union[discord.Guild, int]):
+        if isinstance(guild, discord.Guild):
+            guild = guild.id
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (guild, ))
+        subs = await cursor.fetchall()
+        await cursor.close()
+        # Get channel settings
+        cursor = await self.bot.aDB.cursor()
+        await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (guild, ))
+        channel_ids = await cursor.fetchall()
+        await cursor.close()
+
+        # Store channels
+        channels = []
+        for channel_id in channel_ids:
+            channel = self.bot.get_channel(channel_id[0])
+            if channel is None:
+                channel = await self.bot.fetch_channel(channel_id[0])
+            channels.append(channel)
+
+        # Maybe implement some subreddit/submission caching (not really necessary now since we only work with text)
+        for sub in subs:
+            subreddit = await self.r.subreddit(sub[0])
+            if sub[1] == "top":
+                async for post in subreddit.top(limit=sub[2]):
+                    author = await post.author()
+                    # Limit the amount of text to not exceed the embed limit
+                    if len(post.selftext) < 2048:
+                        descr = post.selftext
+                    else:
+                        descr = post.selftext[:2045] + "..."
+                    embed = discord.Embed(title=post.title, description=descr, url="https://www.reddit.com"+post.permalink, colour=self.reddit_colour)
+                    embed.set_author(name=f"by u/{author.name}", icon_url=author.icon_img)
+                    embed.set_footer(text=f"r/{sub[0]}", icon_url=subreddit.icon_img)
+                    if post.url.endswith(".png") or post.url.endswith(".jpg") or post.url.endswith(".jpeg") or post.url.endswith(".gif"):
+                        embed.set_image(url=post.url)
+                    for channel in channels:
+                        # Don't send NSFW image into non-NSFW channel
+                        if post.over_18:
+                            if channel.is_nsfw():
+                                await channel.send(embed=embed)
+                                if post.is_video:
+                                    await channel.send(post.media['reddit_video']['fallback_url'])
+                        else:
+                            await channel.send(embed=embed)
+                            if post.is_video:
+                                await channel.send(post.media['reddit_video']['fallback_url'])
+
     # Start the post loop at a certain time
-    async def start_post(self):
+    async def start_post_loop(self):
         now = datetime.now()
         if now.hour < 17:
             then = datetime.today().replace(hour=17)
@@ -63,56 +113,12 @@ class Reddit(commands.Cog):
             then = datetime.today().replace(day=now.day+1, hour=17)
         delta = then - now
         await sleep(delta.seconds)
-        self.post.start()
+        self.post_loop.start()
 
     @tasks.loop(hours=24)
-    async def post(self):
+    async def post_loop(self):
         for guild in self.guilds:
-            cursor = await self.bot.aDB.cursor()
-            await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (guild, ))
-            subs = await cursor.fetchall()
-            await cursor.close()
-            # Get channel settings
-            cursor = await self.bot.aDB.cursor()
-            await cursor.execute("SELECT channel FROM reddit_channels WHERE guild=?", (guild, ))
-            channel_ids = await cursor.fetchall()
-            await cursor.close()
-
-            # Store channels
-            channels = []
-            for channel_id in channel_ids:
-                channel = self.bot.get_channel(channel_id[0])
-                if channel is None:
-                    channel = await self.bot.fetch_channel(channel_id[0])
-                channels.append(channel)
-
-            # Maybe implement some subreddit/submission caching (not really necessary now since we only work with text)
-            for sub in subs:
-                subreddit = await self.r.subreddit(sub[0])
-                if sub[1] == "top":
-                    async for post in subreddit.top(limit=sub[2]):
-                        author = await post.author()
-                        # Limit the amount of text to not exceed the embed limit
-                        if len(post.selftext) < 2048:
-                            descr = post.selftext
-                        else:
-                            descr = post.selftext[:2045] + "..."
-                        embed = discord.Embed(title=post.title, description=descr, url="https://www.reddit.com"+post.permalink, colour=self.reddit_colour)
-                        embed.set_author(name=f"by u/{author.name}", icon_url=author.icon_img)
-                        embed.set_footer(text=f"r/{sub[0]}", icon_url=subreddit.icon_img)
-                        if post.url.endswith(".png") or post.url.endswith(".jpg") or post.url.endswith(".jpeg") or post.url.endswith(".gif"):
-                            embed.set_image(url=post.url)
-                        for channel in channels:
-                            # Don't send NSFW image into non-NSFW channel
-                            if post.over_18:
-                                if channel.is_nsfw():
-                                    await channel.send(embed=embed)
-                                    if post.is_video:
-                                        await channel.send(post.media['reddit_video']['fallback_url'])
-                            else:
-                                await channel.send(embed=embed)
-                                if post.is_video:
-                                    await channel.send(post.media['reddit_video']['fallback_url'])
+            await self.post(guild)
 
     @commands.group(name="reddit", aliases=['r'])
     async def reddit_cmd(self, ctx):
