@@ -10,7 +10,7 @@ class Fun(commands.Cog):
                       short_doc="Get Redditor's latency to Discord servers",
                       description="Allows you to get Redditor's latency to Discord servers. Doesn't take in account your latency!")
     async def ping(self, ctx):
-        embed = discord.Embed(title="Ping", description=f"Ping: {round(self.bot.latency * 1000)}ms", color=self.bot.main_colour)
+        embed = discord.Embed(title="Pong!", description=f"Ping: {round(self.bot.latency * 1000)}ms", color=self.bot.main_colour)
         return await ctx.reply(embed=embed, mention_author=False)
 
     @commands.cooldown(1, 3600, commands.BucketType.user)
