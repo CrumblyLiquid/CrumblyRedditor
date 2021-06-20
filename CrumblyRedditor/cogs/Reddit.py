@@ -125,6 +125,12 @@ class Reddit(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help("reddit")
 
+    @reddit_cmd.group(name="run", aliases=["r"])
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def run_post(self, ctx):
+        return await self.post(ctx.guild)
+
     @reddit_cmd.group(aliases=["channels", "c"])
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
