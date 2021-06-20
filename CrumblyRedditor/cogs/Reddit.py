@@ -19,6 +19,7 @@ class Reddit(commands.Cog):
         self.bot = bot
 
         self.reddit_colour = 0xFF4500
+        self.subreddit_modes = ["top"]
 
         # Create table
         self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, amount INTEGER)")
@@ -225,6 +226,10 @@ class Reddit(commands.Cog):
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
+        if mode not in self.subreddit_modes:
+            embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
+            return await ctx.send(embed=embed)
+
         cursor = await self.bot.aDB.cursor()
         await cursor.execute("SELECT subreddit FROM reddit_subs WHERE guild=? AND subreddit=?", (ctx.guild.id, sub))
         s = await cursor.fetchone()
@@ -254,6 +259,10 @@ class Reddit(commands.Cog):
         is_sub = await self.rm.is_sub(sub)
         if is_sub == False:
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
+            return await ctx.send(embed=embed)
+
+        if mode not in self.subreddit_modes:
+            embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
         cursor = await self.bot.aDB.cursor()
