@@ -294,7 +294,7 @@ class Reddit(commands.Cog):
         # Subreddit exists
         else:
             # Add the subreddit
-            await self.bot.aDB.execute("UPDATE reddit_subs mode=?, amount=? WHERE guild=? AND subreddit=?", (mode, amount, ctx.guild.id, sub))
+            await self.bot.aDB.execute("UPDATE reddit_subs SET mode=?, amount=? WHERE guild=? AND subreddit=?", (mode, amount, ctx.guild.id, sub))
             await self.bot.aDB.commit()
             embed = discord.Embed(title=f"Subreddit r/{sub}'s updated", description=f"The settings for r/{sub} are now updated! I will use the new settings from this point onwards!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
