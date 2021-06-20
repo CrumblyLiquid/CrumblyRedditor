@@ -2,10 +2,10 @@
  Discord bot posting stuff from Reddit every 24 hours built with Discord.py and aPRAW
 
 ## Requirements
- - [Python 3.9.5](https://www.python.org/downloads/release/python-395/) (versions from 3.6 and up will be probably fine)
+ - [Python](https://www.python.org/) (versions from 3.6 and up will be probably fine)
  - For more see [requirements.txt](requirements.txt)
 
-## Setup
+## Setting up the bot
  1. Install Python
  2. Clone this repository.
  3. Go to the repository destination and run `pip install -r requirements.txt`
@@ -23,6 +23,11 @@
     "prefix": "r/" <- default prefix
 }
 ```
+
+## Running the bot
+ You have two options:
+ 1) Running the bot directly: `py CrumblyRedditor/redditor.py`
+ 2) Running it through docker: `docker build -t crumblyredditor .` + `docker run -d crumblyredditor`
 
 ## Issues
  If you encounter any bugs create an issue and I'll try to resolve the porblem.
