@@ -21,11 +21,11 @@ if __package__ is None:
 from .settings import *
 from .core.prefix import PrefixManager
 from .core.config import ConfigManager
-from .help import RedditorHelp
+from .help import CrumblyHelp
 
-class Redditor(commands.Bot):
+class CrumblyRedditor(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix=self.get_prefix, help_command=RedditorHelp())
+        super().__init__(command_prefix=self.get_prefix, help_command=CrumblyHelp())
         # Setup all the basic stuff
         self.setup()
 
@@ -154,5 +154,5 @@ class Redditor(commands.Bot):
         self.member_count -= guild.member_count
 
 if __name__ == "__main__":
-    bot = Redditor()
+    bot = CrumblyRedditor()
     bot.run(bot.cm.token)

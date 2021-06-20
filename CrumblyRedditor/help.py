@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-class RedditorHelp(commands.HelpCommand):
+class CrumblyHelp(commands.HelpCommand):
     def __init__(self):
         self.main_colour = 0xFF4500
         super().__init__()

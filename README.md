@@ -26,7 +26,7 @@
 
 ## Running the bot
  You have two options:
- 1) Running the bot directly: `py CrumblyRedditor/redditor.py`
+ 1) Running the bot directly: `py CrumblyRedditor/bot.py`
  2) Running it through docker: `docker build -t crumblyredditor .` + `docker run -d crumblyredditor`
 
 ## Issues

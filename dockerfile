@@ -5,4 +5,4 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "./CrumblyRedditor/redditor.py"]
+CMD ["python", "./CrumblyRedditor/bot.py"]
