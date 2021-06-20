@@ -1,4 +1,4 @@
-# Redditor
+# CrumblyRedditor
  Discord bot posting stuff from Reddit every 24 hours built with Discord.py and aPRAW
 
 ## Requirements
