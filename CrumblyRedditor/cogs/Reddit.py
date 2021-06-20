@@ -20,6 +20,7 @@ class Reddit(commands.Cog):
 
         self.reddit_colour = 0xFF4500
         self.subreddit_modes = ["top"]
+        self.subreddit_limit = 15
 
         # Create table
         self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, amount INTEGER)")
@@ -220,14 +221,18 @@ class Reddit(commands.Cog):
     @subreddit.command(name="add", aliases=["a"])
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
-    async def add_subreddit(self, ctx, sub: str, mode: str = "top", amount: int = 10):
+    async def add_subreddit(self, ctx, sub: str, mode: str = "top", amount: int = 5):
+        if mode not in self.subreddit_modes:
+            embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
+            return await ctx.send(embed=embed)
+
+        if amount > self.subreddit_limit:
+            embed = discord.Embed(title=f"I can't post {amount} posts every day.", description=f"I can't post more than {self.subreddit_limit} posts every day.", colour=self.reddit_colour)
+            return await ctx.send(embed=embed)
+
         is_sub = await self.rm.is_sub(sub)
         if is_sub == False:
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
-            return await ctx.send(embed=embed)
-
-        if mode not in self.subreddit_modes:
-            embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
         cursor = await self.bot.aDB.cursor()
@@ -255,14 +260,18 @@ class Reddit(commands.Cog):
     @subreddit.command(name="set", aliases=["s"])
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
-    async def set_subreddit(self, ctx, sub: str, mode: str = "top", amount: int = 10):
+    async def set_subreddit(self, ctx, sub: str, mode: str = "top", amount: int = 5):
+        if mode not in self.subreddit_modes:
+            embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
+            return await ctx.send(embed=embed)
+
+        if amount > self.subreddit_limit:
+            embed = discord.Embed(title=f"I can't post {amount} posts every day.", description=f"I can't post more than {self.subreddit_limit} posts every day.", colour=self.reddit_colour)
+            return await ctx.send(embed=embed)
+
         is_sub = await self.rm.is_sub(sub)
         if is_sub == False:
             embed = discord.Embed(title=f"Subreddit r/{sub} doesn't exist.", description=f"Couldn't find r/{sub}. Maybe you should create it!", colour=self.reddit_colour)
-            return await ctx.send(embed=embed)
-
-        if mode not in self.subreddit_modes:
-            embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
         cursor = await self.bot.aDB.cursor()
