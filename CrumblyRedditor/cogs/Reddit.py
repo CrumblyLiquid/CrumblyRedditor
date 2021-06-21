@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import apraw as r
 from asyncio import sleep
 from datetime import datetime
-from typing import Union, List, Tuple
+from typing import Optional, Union, List, Tuple
 
 class Post:
     def __init__(self, embed: discord.Embed, video: Union[str, None], is_nsfw: bool) -> None:
@@ -35,39 +35,84 @@ class RedditManager:
 
         self.reddit_colour = 0xFF4500
 
+        self.subreddit_modes = {
+            "new": {},
+            "rising": {},
+            # "hot": {
+            #     "default": "GLOBAL",
+            #     "g": ["GLOBAL", "US", "AR", "AU", "BG", "CA", "CL", "CO", "HR", "CZ", "FI", "FR", "DE", "GR", "HU", "IS", "IN", "IE", "IT", "JP", "MY", "MX", "NZ", "PH", "PL", "PT", "PR", "RO", "RS", "SG", "ES", "SE", "TW", "TH", "TR", "GB", "US_WA", "US_DE", "US_DC", "US_WI", "US_WV", "US_HI", "US_FL", "US_WY", "US_NH", "US_NJ", "US_NM", "US_TX", "US_LA", "US_NC", "US_ND", "US_NE", "US_TN", "US_NY", "US_PA", "US_CA", "US_NV", "US_VA", "US_CO", "US_AK", "US_AL", "US_AR", "US_VT", "US_IL", "US_GA", "US_IN", "US_IA", "US_OK", "US_AZ", "US_ID", "US_CT", "US_ME", "US_MD", "US_MA", "US_OH", "US_UT", "US_MO", "US_MN", "US_MI", "US_RI", "US_KS", "US_MT", "US_MS", "US_SC", "US_KY", "US_OR", "US_SD"]
+            #     },
+            "hot": {},
+            "top": {
+                "default": "day",
+                "t": ["hour", "day", "week", "month", "year", "all"]},
+            "controversial": {
+                "default": "day",
+                "t": ["hour", "day", "week", "month", "year", "all"]},
+        }
+
     async def is_sub(self, sub: str) -> bool:
         s = await self.r.subreddit(sub)
         return hasattr(s, "id")
 
+    # top-day
+    def is_valid_mode(self, mode: str) -> bool:
+        if mode in self.subreddit_modes:
+            return True
+        else:
+            return False
 
-    async def get_subs(self, guild: Union[discord.Guild, int]) -> Union[List[Tuple[str, str, int]], None]:
+    def is_valid_mode_type(self, mode: str, type_: str) -> bool:
+        if mode in self.subreddit_modes:
+            if self.subreddit_modes[mode] == {}:
+                if type_ == "":
+                    return True
+                else:
+                    return False
+            else:
+                last = list(self.subreddit_modes[mode])[-1]
+                if type_ in self.subreddit_modes[mode][last]:
+                    return True
+                else:
+                    return False
+        else:
+            return False
+
+    def get_mode_default(self, mode: str) -> str:
+        if mode in self.subreddit_modes:
+            return self.subreddit_modes[mode]["default"]
+        else:
+            return ""
+
+    # SQL related
+    async def get_subs(self, guild: Union[discord.Guild, int]) -> Union[List[Tuple[str, str, str, int]], None]:
         if isinstance(guild, discord.Guild):
             guild = guild.id
         cursor = await self.bot.aDB.cursor()
-        await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (guild, ))
+        await cursor.execute("SELECT subreddit, mode, type, amount FROM reddit_subs WHERE guild=?", (guild, ))
         subs = await cursor.fetchall()
         await cursor.close()
         return subs
 
-    async def get_sub(self, guild: Union[discord.Guild, int], sub: str) -> Union[Tuple[str, str, int], None]:
+    async def get_sub(self, guild: Union[discord.Guild, int], sub: str) -> Union[Tuple[str, str, str, int], None]:
         if isinstance(guild, discord.Guild):
             guild = guild.id
         cursor = await self.bot.aDB.cursor()
-        await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=? AND subreddit=?", (guild, sub))
+        await cursor.execute("SELECT subreddit, mode, type, amount FROM reddit_subs WHERE guild=? AND subreddit=?", (guild, sub))
         s = await cursor.fetchone()
         await cursor.close()
         return s
 
-    async def add_sub(self, guild: Union[discord.Guild, int], sub: str, mode: str, amount: int) -> None:
+    async def add_sub(self, guild: Union[discord.Guild, int], sub: str, mode: str, type_: str, amount: int) -> None:
         if isinstance(guild, discord.Guild):
             guild = guild.id
-        await self.bot.aDB.execute("INSERT INTO reddit_subs (guild, subreddit, mode, amount) VALUES(?,?,?,?)", (guild, sub, mode, amount))
+        await self.bot.aDB.execute("INSERT INTO reddit_subs (guild, subreddit, mode, type, amount) VALUES(?,?,?,?,?)", (guild, sub, mode, type_, amount))
         await self.bot.aDB.commit()
 
-    async def set_sub(self, guild: Union[discord.Guild, int], sub: str, mode: str, amount: int) -> None:
+    async def set_sub(self, guild: Union[discord.Guild, int], sub: str, mode: str, type_: str, amount: int) -> None:
         if isinstance(guild, discord.Guild):
             guild = guild.id
-        await self.bot.aDB.execute("UPDATE reddit_subs SET mode=?, amount=? WHERE guild=? AND subreddit=?", (mode, amount, guild, sub))
+        await self.bot.aDB.execute("UPDATE reddit_subs SET mode=?, type=?, amount=? WHERE guild=? AND subreddit=?", (mode, type_, amount, guild, sub))
         await self.bot.aDB.commit()
 
     async def del_sub(self, guild: Union[discord.Guild, int], sub: str) -> None:
@@ -179,7 +224,28 @@ class RedditManager:
         for sub in subs:
             subreddit = await self.r.subreddit(sub[0])
             if sub[1] == "top":
-                async for submission in subreddit.top(limit=sub[2]):
+                async for submission in subreddit.top(t=sub[2], limit=sub[3]):
+                    post = await self.get_post(subreddit, submission)
+                    for channel in channels:
+                        await post.send(channel)
+            elif sub[1] == "controversial":
+                async for submission in subreddit.top(t=sub[2], limit=sub[3]):
+                    post = await self.get_post(subreddit, submission)
+                    for channel in channels:
+                        await post.send(channel)
+            elif sub[1] == "hot":
+                # async for submission in subreddit.top(g=sub[2], limit=sub[3]):
+                async for submission in subreddit.top(limit=sub[3]):
+                    post = await self.get_post(subreddit, submission)
+                    for channel in channels:
+                        await post.send(channel)
+            elif sub[1] == "new":
+                async for submission in subreddit.top(limit=sub[3]):
+                    post = await self.get_post(subreddit, submission)
+                    for channel in channels:
+                        await post.send(channel)
+            elif sub[1] == "rising":
+                async for submission in subreddit.top(limit=sub[3]):
                     post = await self.get_post(subreddit, submission)
                     for channel in channels:
                         await post.send(channel)
@@ -189,11 +255,11 @@ class Reddit(commands.Cog):
         self.bot = bot
 
         self.reddit_colour = 0xFF4500
-        self.subreddit_modes = ["top"]
-        self.subreddit_limit = 15
+
+        self.subreddit_post_limit = 15
 
         # Create table
-        self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, amount INTEGER)")
+        self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_subs (id INTEGER PRIMARY KEY, guild INTEGER, subreddit TEXT, mode TEXT, type TEXT, amount INTEGER)")
         self.bot.DB.execute("CREATE TABLE IF NOT EXISTS reddit_channels (id INTEGER PRIMARY KEY, guild INTEGER, channel INTEGER)")
         self.bot.DB.commit()
 
@@ -242,6 +308,26 @@ class Reddit(commands.Cog):
     async def post_loop(self):
         for guild in self.guilds:
             await self.rm.post(guild)
+
+    def convert_args(self, args) -> Tuple[str, int]:
+        if len(args) > 2:
+            raise commands.TooManyArguments()
+        elif len(args) == 2:
+            type_ = args[0]
+            if not args[1].isdecimal():
+                raise commands.BadArgument(message="Amount must be a number")
+            amount = int(args[1])
+        elif len(args) == 1:
+            if not args[0].isdecimal():
+                type_ = args[0]
+                amount = 5
+            else:
+                type_ = ""
+                amount = int(args[0])
+        else:
+            type_ = ""
+            amount = 5
+        return type_, amount
 
     @commands.group(name="reddit", aliases=['r'])
     async def reddit_cmd(self, ctx):
@@ -320,25 +406,28 @@ class Reddit(commands.Cog):
         # List all subreddits
         if ctx.invoked_subcommand is None:
             cursor = await self.bot.aDB.cursor()
-            await cursor.execute("SELECT subreddit, mode, amount FROM reddit_subs WHERE guild=?", (ctx.guild.id, ))
+            await cursor.execute("SELECT subreddit, mode, type, amount FROM reddit_subs WHERE guild=?", (ctx.guild.id, ))
             bundles = await cursor.fetchall()
             await cursor.close()
             subs = []
             for bundle in bundles:
-                subs.append(f"- r/{bundle[0]} | {bundle[1]} | {bundle[2]}")
+                subs.append(f"- r/{bundle[0]} | {bundle[1]} {bundle[2]} | {bundle[3]}")
             embed = discord.Embed(title=f"Subreddits for {ctx.guild.name}", description="Subreddit | Mode | Amount\n" + '\n'.join(subs), colour=self.reddit_colour)
             await ctx.send(embed=embed)
 
-    @subreddit.command(name="add", aliases=["a"])
+    @subreddit.command(name="add", aliases=["a"], usage="<sub> [mode=top] [type] [amount=5]")
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
-    async def add_subreddit(self, ctx, sub: str, mode: str = "top", amount: int = 5):
-        if mode not in self.subreddit_modes:
+    async def add_subreddit(self, ctx, sub: str, mode: str = "top", *args):
+        type_, amount = self.convert_args(args)
+        if self.rm.is_valid_mode(mode) and type_ == "":
+            type_ = self.rm.get_mode_default(mode)
+        elif not self.rm.is_valid_mode_type(mode, type_):
             embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
-        if amount > self.subreddit_limit:
-            embed = discord.Embed(title=f"I can't post {amount} posts every day.", description=f"I can't post more than {self.subreddit_limit} posts every day.", colour=self.reddit_colour)
+        if amount > self.subreddit_post_limit:
+            embed = discord.Embed(title=f"I can't post {amount} posts every day.", description=f"I can't post more than {self.subreddit_post_limit} posts every day.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
         is_sub = await self.rm.is_sub(sub)
@@ -350,7 +439,7 @@ class Reddit(commands.Cog):
         # Subreddit doesn't exist
         if s is None:
             # Add the subreddit
-            await self.rm.add_sub(ctx.guild, sub, mode, amount)
+            await self.rm.add_sub(ctx.guild, sub, mode, type_, amount)
 
             # Add to guilds
             if ctx.guild.id not in self.guilds:
@@ -363,16 +452,19 @@ class Reddit(commands.Cog):
             embed = discord.Embed(title=f"Subreddit r/{sub} is already added", description=f"I'm already sending posts from this subreddit. No need to add it twice :)", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
-    @subreddit.command(name="set", aliases=["s"])
+    @subreddit.command(name="set", aliases=["s"], usage="<sub> [mode=top] [type] [amount=5]")
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
-    async def set_subreddit(self, ctx, sub: str, mode: str = "top", amount: int = 5):
-        if mode not in self.subreddit_modes:
+    async def set_subreddit(self, ctx, sub: str, mode: str = "top", *args):
+        type_, amount = self.convert_args(args)
+        if self.rm.is_valid_mode(mode) and type_ == "":
+            type_ = self.rm.get_mode_default(mode)
+        elif not self.rm.is_valid_mode_type(mode, type_):
             embed = discord.Embed(title=f"Mode {mode} isn't a valid mode.", description=f"Mode {mode} either doesn't exist or we don't support it.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
-        if amount > self.subreddit_limit:
-            embed = discord.Embed(title=f"I can't post {amount} posts every day.", description=f"I can't post more than {self.subreddit_limit} posts every day.", colour=self.reddit_colour)
+        if amount > self.subreddit_post_limit:
+            embed = discord.Embed(title=f"I can't post {amount} posts every day.", description=f"I can't post more than {self.subreddit_post_limit} posts every day.", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
         is_sub = await self.rm.is_sub(sub)
@@ -385,10 +477,10 @@ class Reddit(commands.Cog):
         # Subreddit doesn't exist
         if s is None:
             # Add the subreddit
-            await self.rm.add_sub(ctx.guild, sub, mode, amount)
+            await self.rm.add_sub(ctx.guild, sub, mode, type_, amount)
 
             # Add to guilds
-            if ctx.guild.id in self.guilds:
+            if ctx.guild.id not in self.guilds:
                 self.guilds.append(ctx.guild)
             embed = discord.Embed(title=f"Subreddit r/{sub} was added", description=f"Subreddit r/{sub} was added! I will start sending posts from that subreddit :)", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
@@ -396,7 +488,7 @@ class Reddit(commands.Cog):
         # Subreddit exists
         else:
             # Add the subreddit
-            await self.rm.set_sub(ctx.guild, sub, mode, amount)
+            await self.rm.set_sub(ctx.guild, sub, mode, type_, amount)
             embed = discord.Embed(title=f"Subreddit r/{sub}'s updated", description=f"The settings for r/{sub} are now updated! I will use the new settings from this point onwards!", colour=self.reddit_colour)
             return await ctx.send(embed=embed)
 
