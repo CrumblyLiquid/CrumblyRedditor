@@ -297,9 +297,9 @@ class Reddit(commands.Cog):
     async def start_post_loop(self):
         now = datetime.now()
         if now.hour < 17:
-            then = datetime.today().replace(hour=17)
+            then = datetime.today().replace(hour=17, minute=0, second=0, microsecond=0)
         else:
-            then = datetime.today().replace(day=now.day+1, hour=17)
+            then = datetime.today().replace(day=now.day+1, hour=17, minute=0, second=0, microsecond=0)
         delta = then - now
         await sleep(delta.seconds)
         self.post_loop.start()
